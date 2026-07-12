@@ -23,6 +23,7 @@
 
 ---
 
+
 # 📂 Projects
 
 ## 🤖 ChatBot — Personality-Driven Conversations
@@ -46,6 +47,25 @@ A simple chatbot built with LangChain and Gemini that role-plays a chosen person
 - The personality is injected as a `SystemMessage`, so the AI stays in character for every reply
 - Full conversation history is maintained using `HumanMessage` / `AIMessage`, so the bot remembers context across turns
 - Streamlit version adds a chat-style UI with message bubbles, a sidebar to pick/reset personality, and a "Start Chat" flow
+
+<br>
+
+```mermaid
+flowchart LR
+    P["🎭 Pick Personality"]:::input --> S["🧠 SystemMessage\ninjected once"]:::stage
+    S --> L["🔁 Conversation Loop"]:::stage
+    U["👤 User Message"]:::input --> H["📜 History\nHumanMessage + AIMessage"]:::store
+    H --> L
+    L --> G["✨ Gemini"]:::llm
+    G --> R["💬 In-character Reply"]:::output
+    R --> H
+
+    classDef input fill:#FFE0B2,stroke:#FF7000,stroke-width:2px,color:#000
+    classDef stage fill:#E1D5F5,stroke:#6E56CF,stroke-width:2px,color:#000
+    classDef store fill:#D0E8FF,stroke:#1C6EF2,stroke-width:2px,color:#000
+    classDef llm fill:#FFD6D6,stroke:#E23B3B,stroke-width:2px,color:#000
+    classDef output fill:#D4F7D4,stroke:#2FA84F,stroke-width:2px,color:#000
+```
 
 **Files**
 
@@ -89,6 +109,23 @@ An information-extraction tool that reads a free-text paragraph about one or mor
 
 - Streamlit UI includes a "Load Sample Paragraph" button for quick testing and a toggle to view raw JSON output
 
+<br>
+
+```mermaid
+flowchart LR
+    T["📝 Free-text\nParagraph"]:::input --> G["✨ Gemini"]:::llm
+    G --> D{"🔀 Mode?"}:::stage
+    D -->|Text| M["📝 ChatPromptTemplate"]:::stage
+    D -->|Structured| P["🧬 PydanticOutputParser"]:::stage
+    M --> O1["📄 Markdown Summary"]:::output
+    P --> O2["✅ Validated JSON"]:::output
+
+    classDef input fill:#FFE0B2,stroke:#FF7000,stroke-width:2px,color:#000
+    classDef stage fill:#E1D5F5,stroke:#6E56CF,stroke-width:2px,color:#000
+    classDef llm fill:#FFD6D6,stroke:#E23B3B,stroke-width:2px,color:#000
+    classDef output fill:#D4F7D4,stroke:#2FA84F,stroke-width:2px,color:#000
+```
+
 **Files**
 
 | File | Description |
@@ -123,6 +160,7 @@ streamlit run CineParse/structured_extractor_ui.py
 This is the most involved project in the repo, touching every stage of a real RAG pipeline — loading, chunking, embedding, storing, retrieving, and generating.
 
 <br>
+
 
 #### 🔄 End-to-End Pipeline
 
@@ -166,6 +204,24 @@ Loaders pull raw content out of a file and convert it into LangChain `Document` 
 | 🌐 `WebBaseLoader` | Scrapes and loads content directly from a URL |
 | 🗂️ `UnstructuredFileLoader` | Mixed formats — docx, pptx, html — via the `unstructured` library |
 
+**🔴 PyPDFLoader** *(used here)*
+Opens a PDF and returns one `Document` per page, with the page number stored in metadata. That per-page metadata is what makes it possible to later tell a user "this answer came from page 12" — losing it (e.g. by concatenating the whole PDF into one blob first) would make answers harder to trace back to a source.
+
+**📃 TextLoader**
+The simplest loader — just reads a `.txt` file as-is into a single `Document`. No parsing needed, since there's no page/formatting structure to preserve.
+
+**📊 CSVLoader**
+Turns each row of a CSV into its own `Document`, with column names available as metadata. Handy for Q&A over structured/tabular data rather than prose.
+
+**📁 DirectoryLoader**
+Not a parser itself — it's a wrapper that walks a folder and applies another loader (like `PyPDFLoader` or `TextLoader`) to every matching file inside, so you can ingest a whole knowledge base in one call instead of looping manually.
+
+**🌐 WebBaseLoader**
+Fetches a URL and extracts the visible text from the HTML, letting you build a RAG pipeline over live web pages instead of local files.
+
+**🗂️ UnstructuredFileLoader**
+A catch-all for messier or mixed formats (Word docs, PowerPoint, HTML, images with text) — it relies on the `unstructured` library to detect the file type and pull out text accordingly, at the cost of being heavier and slower than a format-specific loader.
+
 > 💡 The loader you pick decides what metadata survives (e.g. page numbers), which shapes how useful your citations/context can be later.
 
 </details>
@@ -188,6 +244,22 @@ chunk_overlap = 200    # overlap so context isn't lost at chunk boundaries
 | 🔢 `TokenTextSplitter` | Splits by token count — precise LLM context-limit control |
 | 🧠 `SemanticChunker` | Splits where *meaning* shifts, using embeddings instead of a fixed size |
 
+```mermaid
+flowchart LR
+    subgraph Doc["📄 Original Text"]
+        direction LR
+        Z["............................................"]
+    end
+    Doc --> C1["Chunk 1\n(0–1000)"]:::c1
+    Doc --> C2["Chunk 2\n(800–1800)"]:::c2
+    Doc --> C3["Chunk 3\n(1600–2600)"]:::c3
+
+    classDef c1 fill:#FFE0B2,stroke:#FF7000,color:#000
+    classDef c2 fill:#E1D5F5,stroke:#6E56CF,color:#000
+    classDef c3 fill:#D0E8FF,stroke:#1C6EF2,color:#000
+```
+*Each 1000-character chunk overlaps the next by 200 characters, so a sentence split across a chunk boundary still appears in full in at least one chunk.*
+
 </details>
 
 <details>
@@ -204,6 +276,8 @@ Each chunk becomes a high-dimensional vector via `sentence-transformers/all-Mini
 <summary><b>4️⃣ Retrievers</b> — deciding which chunks answer the question</summary>
 <br>
 
+Once chunks are embedded and stored, the retriever's job is to pick *which* ones actually get handed to the LLM for a given question. This choice matters a lot — pull the wrong chunks and even the best LLM will answer confidently wrong.
+
 | Strategy | ⚙️ How It Works | ⭐ Best For |
 |---|---|---|
 | 🎯 **Similarity Search** | Top-`k` chunks by highest cosine similarity | Simple, fast, default baseline |
@@ -211,6 +285,36 @@ Each chunk becomes a high-dimensional vector via `sentence-transformers/all-Mini
 | 🚧 **Similarity Score Threshold** | Like similarity search, but drops chunks below a min score | Prevents forcing irrelevant chunks when the doc truly lacks the answer |
 | 🔀 **Multi-Query Retriever** | LLM rewrites the question several ways, retrieves for each, merges results | Boosts recall when phrasing may not match the doc's wording |
 | 🧹 **Contextual Compression** | Retrieves normally, then strips irrelevant sentences from each chunk | Cuts noise from long or loosely-relevant chunks |
+
+<br>
+
+**🎯 Similarity Search**
+The default, simplest retriever. It embeds the question, then returns the `k` chunks whose vectors sit closest to it in vector space (usually via cosine similarity). Fast and predictable — but if a document repeats similar information in several places, all `k` results can end up saying almost the same thing, wasting context space on redundancy instead of coverage.
+
+**🌈 MMR (Maximal Marginal Relevance)** — *what DocQuery uses*
+MMR fixes the redundancy problem above. It first fetches a *larger* candidate pool (`fetch_k`, e.g. 10 chunks), then greedily picks the final `k` by balancing two things: how relevant a chunk is to the question, and how *different* it is from chunks already picked. The `lambda_mult` knob controls that balance — `1.0` behaves like plain similarity search, `0.0` maximizes diversity even at the cost of relevance. DocQuery uses `0.5` — an even split — so answers stay accurate while still pulling from different parts of the document instead of one repetitive cluster.
+
+```mermaid
+flowchart LR
+    subgraph SIM["🎯 Similarity Search"]
+        direction TB
+        Q1["❓ Query"] --> S1["Chunk A"] & S2["Chunk A'"] & S3["Chunk A''"]
+    end
+    subgraph MMR2["🌈 MMR"]
+        direction TB
+        Q2["❓ Query"] --> M1["Chunk A"] & M2["Chunk B"] & M3["Chunk C"]
+    end
+```
+*Similarity search can return three near-duplicate chunks (all about the same topic). MMR spreads the picks across distinct topics, giving the LLM broader coverage of the document.*
+
+**🚧 Similarity Score Threshold**
+Same idea as similarity search, but with a hard cutoff — any chunk below a minimum similarity score is discarded, even if it would otherwise be in the top-`k`. Useful for making a bot honestly say "I don't know" instead of stretching to answer with a weakly-related chunk.
+
+**🔀 Multi-Query Retriever**
+A single question can be phrased many ways, and the document might use different wording than the user. This retriever uses an LLM to generate 3–5 rephrasings of the question, runs retrieval for each, then de-duplicates and merges the results — trading extra LLM calls for noticeably better recall on tricky phrasing.
+
+**🧹 Contextual Compression Retriever**
+Retrieves chunks normally, then runs each one through an LLM or embeddings filter to strip out irrelevant sentences before passing it to the final prompt. Useful when chunks are long but only a sentence or two inside them is actually relevant — keeps the final context tighter and cheaper.
 
 **DocQuery's exact config:**
 ```python
