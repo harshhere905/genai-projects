@@ -7,6 +7,7 @@
 ![LangChain](https://img.shields.io/badge/LangChain-🦜🔗-1C3C3C)
 ![Gemini](https://img.shields.io/badge/Gemini-2.5--Flash-8E75B2?logo=googlegemini&logoColor=white)
 ![Mistral](https://img.shields.io/badge/Mistral-AI-FF7000?logo=mistralai&logoColor=white)
+![Tavily](https://img.shields.io/badge/Tavily-Search-0EA5E9)
 ![Chroma](https://img.shields.io/badge/ChromaDB-VectorStore-6E56CF)
 ![Streamlit](https://img.shields.io/badge/Streamlit-UI-FF4B4B?logo=streamlit&logoColor=white)
 ![Status](https://img.shields.io/badge/Status-Active-success)
@@ -17,7 +18,7 @@
 
 ### 📖 Quick Navigation
 
-[🤖 ChatBot](#-chatbot--personality-driven-conversations) · [🍿 CineParse](#-cineparse--movie-info-extraction) · [📄 DocQuery](#-docquery--chat-with-your-pdfs-rag) · [⚙️ Setup](#️-getting-started) · [🛠️ Stack](#️-built-with)
+[🤖 ChatBot](#-chatbot--personality-driven-conversations) · [🍿 CineParse](#-cineparse--movie-info-extraction) · [📰 Summify](#-summify--ai-news-summarizer) · [📄 DocQuery](#-docquery--chat-with-your-pdfs-rag) · [⚙️ Setup](#️-getting-started) · [🛠️ Stack](#️-built-with)
 
 </div>
 
@@ -138,6 +139,56 @@ flowchart LR
 
 ```bash
 streamlit run CineParse/structured_extractor_ui.py
+```
+
+---
+
+## 📰 Summify — AI News Summarizer
+
+<div align="center">
+
+![Mistral](https://img.shields.io/badge/LLM-Mistral_Small-FF7000?style=for-the-badge&logo=mistralai&logoColor=white)
+![Tavily](https://img.shields.io/badge/Search-Tavily-0EA5E9?style=for-the-badge)
+
+**Type in any topic, and get a live web search turned into a clean, bullet-point news summary — no manual browsing required.**
+
+</div>
+
+<br>
+
+A lightweight research assistant that combines real-time web search with LLM summarization. Instead of hallucinating "current" events from training data, it actually searches the web first and only summarizes what it finds.
+
+- Searches the web for a given topic using the **Tavily Search API**
+- Feeds the retrieved article content into Mistral via a `ChatPromptTemplate`, asking for a clean bullet-point summary
+- Streamlit UI lets you adjust how many search results to pull in, and includes an expandable panel to inspect the raw sources behind the summary
+- Uses `st.cache_resource` so the LLM chain isn't rebuilt on every run
+
+<br>
+
+```mermaid
+flowchart LR
+    Q["❓ Topic"]:::input --> S["🔍 Tavily Search"]:::stage
+    S --> E["📑 Extract\narticle content"]:::stage
+    E --> P["📝 ChatPromptTemplate"]:::stage
+    P --> L["🌬️ Mistral"]:::llm
+    L --> O["✅ Bullet-Point Summary"]:::output
+
+    classDef input fill:#FFE0B2,stroke:#FF7000,stroke-width:2px,color:#000
+    classDef stage fill:#E1D5F5,stroke:#6E56CF,stroke-width:2px,color:#000
+    classDef llm fill:#FFD6D6,stroke:#E23B3B,stroke-width:2px,color:#000
+    classDef output fill:#D4F7D4,stroke:#2FA84F,stroke-width:2px,color:#000
+```
+
+**Files**
+
+| File | Description |
+|---|---|
+| `app.py` | Streamlit UI — search a topic and get a bullet-point summary |
+
+**Run**
+
+```bash
+streamlit run Summify/app.py
 ```
 
 ---
@@ -395,12 +446,14 @@ Create a `.env` file in the root folder:
 ```env
 GOOGLE_API_KEY=your_google_api_key_here
 MISTRAL_API_KEY=your_mistral_api_key_here
+TAVILY_API_KEY=your_tavily_api_key_here
 ```
 
 | Key | Where to get it | Used by |
 |---|---|---|
 | 🔑 `GOOGLE_API_KEY` | [Google AI Studio](https://aistudio.google.com/apikey) | ChatBot, CineParse |
-| 🔑 `MISTRAL_API_KEY` | [Mistral AI Console](https://console.mistral.ai/) | DocQuery |
+| 🔑 `MISTRAL_API_KEY` | [Mistral AI Console](https://console.mistral.ai/) | Summify, DocQuery |
+| 🔑 `TAVILY_API_KEY` | [Tavily](https://tavily.com/) | Summify |
 
 > 💡 `sentence-transformers/all-MiniLM-L6-v2` (used for DocQuery's embeddings) runs fully locally — no HuggingFace API key needed.
 
@@ -415,7 +468,8 @@ Use the run command listed in each project's section above.
 |---|---|
 | 🦜🔗 **LangChain** | LLM orchestration, chains, prompts, retrievers |
 | ✨ **Google Gemini** | Language model (gemini-2.5-flash) — ChatBot, CineParse |
-| 🌬️ **Mistral AI** | Language model — DocQuery |
+| 🌬️ **Mistral AI** | Language model — Summify, DocQuery |
+| 🔍 **Tavily** | Real-time web search API — Summify |
 | 🤗 **HuggingFace Embeddings** | Local, free text embeddings (all-MiniLM-L6-v2) — DocQuery |
 | 🎨 **ChromaDB** | Vector database for storing & retrieving document embeddings — DocQuery |
 | 🎈 **Streamlit** | Interactive UI |
