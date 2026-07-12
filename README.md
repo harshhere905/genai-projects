@@ -17,12 +17,11 @@
 
 ### 📖 Quick Navigation
 
-[🤖 ChatBot](#-chatbot) · [🍿 CineParse](#-cineparse) · [📄 DocQuery](#-docquery--chat-with-your-pdfs-rag) · [⚙️ Setup](#️-getting-started) · [🛠️ Stack](#️-built-with)
+[🤖 ChatBot](#-chatbot--personality-driven-conversations) · [🍿 CineParse](#-cineparse--movie-info-extraction) · [📄 DocQuery](#-docquery--chat-with-your-pdfs-rag) · [⚙️ Setup](#️-getting-started) · [🛠️ Stack](#️-built-with)
 
 </div>
 
 ---
-
 
 # 📂 Projects
 
@@ -160,7 +159,6 @@ streamlit run CineParse/structured_extractor_ui.py
 This is the most involved project in the repo, touching every stage of a real RAG pipeline — loading, chunking, embedding, storing, retrieving, and generating.
 
 <br>
-
 
 #### 🔄 End-to-End Pipeline
 
