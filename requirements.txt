@@ -10,3 +10,5 @@ pypdf
 pydantic==2.13.4
 python-dotenv==1.2.2
 streamlit==1.58.0
+tavily-python
+langchain-tavily
